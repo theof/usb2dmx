@@ -23,7 +23,6 @@ def get_pixels():
 
 def to_bytes(pixels):
     flat = [round(color * 255) for colors in pixels for color in colors]
-    print(flat)
     assert(len(flat) <= DMX_CHANNELS_NUM)
     padding = [0 for _ in range(DMX_CHANNELS_NUM - len(flat))]
     return (b"" + bytes(flat) + bytes(padding))
@@ -36,19 +35,19 @@ for d in hid.enumerate(USB_VID):
     if not dev:
         print("device not found")
         exit(1)
-    dev.write(b"\x01" + bytes([0 for _ in range(32)])) # reset the slice counter
-    str_in = dev.read(DMX_CHANNELS_NUM + 1)
-    print("Received from HID Device: ", str_in, '\n')
+    prev_ts = 0
     while True:
         data = to_bytes(get_pixels())
-        for report in range(REPORTS_PER_UNIVERSE):
+        for report in range(int(REPORTS_PER_UNIVERSE / 2)):
             slc = data[report * CHANNELS_PER_REPORT:(report + 1) * CHANNELS_PER_REPORT]
             # Encode to UTF8 for array of chars.
             # hid generic inout is single report therefore by HIDAPI requirement
             # it must be preceeded with 0x00 as dummy reportID
-            dev.write(b"\x00" + slc)
-            str_in = dev.read(DMX_CHANNELS_NUM + 1)
-            print("Received from HID Device: ", str_in, '\n')
-        time.sleep(0.1)
+            array = b"\x00" + bytes([report]) + slc + bytes([0 for _ in range(30)])
+            dev.write(array)
+            str_in = dev.read(64)
+            assert(str_in == array[1:])
+        print("fps: " + str(1 / (time.monotonic() - prev_ts)))
+        prev_ts = time.monotonic()
 print("could not find such device")
 exit(1)

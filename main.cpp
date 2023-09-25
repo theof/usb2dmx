@@ -95,12 +95,9 @@ int main(void)
 // Device callbacks
 //--------------------------------------------------------------------+
 
-int report_count = 0;
-
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
-  report_count = 0;
   blink_interval_ms = BLINK_MOUNTED;
 }
 
@@ -152,14 +149,9 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
   (void) itf;
   (void) report_id;
   (void) report_type;
-  if (report_id == 0) {
-	  dmx_buffer[0] = 0; // dmx start code
-	  memcpy(dmx_buffer + 1 + 32 * (report_count % 16), buffer, bufsize);
-
-	  report_count++;
-  } else {
-	  report_count = 0;
-  }
+  dmx_buffer[0] = 0; // dmx start code
+  if (buffer[0] < 16)
+	  memcpy(dmx_buffer + 1 + 32 * buffer[0], buffer + 1, 32);
   tud_hid_report(0, buffer, bufsize);
 }
 
