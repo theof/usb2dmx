@@ -38,15 +38,13 @@ for d in hid.enumerate(USB_VID):
     prev_ts = 0
     while True:
         data = to_bytes(get_pixels())
-        for report in range(int(REPORTS_PER_UNIVERSE / 2)):
+        for report in range(10): #REPORTS_PER_UNIVERSE)):
             slc = data[report * CHANNELS_PER_REPORT:(report + 1) * CHANNELS_PER_REPORT]
             # Encode to UTF8 for array of chars.
             # hid generic inout is single report therefore by HIDAPI requirement
             # it must be preceeded with 0x00 as dummy reportID
             array = b"\x00" + bytes([report]) + slc + bytes([0 for _ in range(30)])
             dev.write(array)
-            str_in = dev.read(64)
-            assert(str_in == array[1:])
         print("fps: " + str(1 / (time.monotonic() - prev_ts)))
         prev_ts = time.monotonic()
 print("could not find such device")

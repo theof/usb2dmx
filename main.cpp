@@ -60,7 +60,7 @@ void dmx_task(DmxOutput *out)
 {
 	static uint64_t last_write_ts = 0;
 
-	if (!out->busy() && last_write_ts < time_us_64())
+	if (!out->busy() && last_write_ts + 10000 < time_us_64())
 	{
 		last_write_ts = time_us_64();
 		out->write(dmx_buffer, DMX_CHANNELS);
@@ -141,6 +141,7 @@ uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t
   return 0;
 }
 
+static uint64_t memcpy_time_us = 0;
 // Invoked when received SET_REPORT control request or
 // received data on OUT endpoint ( Report ID = 0, Type = 0 )
 void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
@@ -149,10 +150,12 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
   (void) itf;
   (void) report_id;
   (void) report_type;
+  uint64_t start;
   dmx_buffer[0] = 0; // dmx start code
-  if (buffer[0] < 16)
+  if (buffer[0] < 16) {
 	  memcpy(dmx_buffer + 1 + 32 * buffer[0], buffer + 1, 32);
-  tud_hid_report(0, buffer, bufsize);
+  }
+  tud_hid_report(0, buffer, 0);
 }
 
 //--------------------------------------------------------------------+
