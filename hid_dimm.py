@@ -1,5 +1,8 @@
 # Install python3 HID package https://pypi.org/project/hid/
-import hid
+# pip3 install pyusb
+import usb.core
+import usb.util
+
 import time
 import os
 import colorsys
@@ -15,8 +18,24 @@ assert(REPORTS_PER_UNIVERSE * CHANNELS_PER_REPORT == DMX_CHANNELS_NUM)
 def now():
     return (time.monotonic_ns() / 1e9)
 
+def get_pixel_kick(i):
+    h = (cos(now() / 5) + 1) / 2
+    kick = abs((((-now() * 2) % 1)))
+    #v = (((NUM_PIXELS - i) / NUM_PIXELS) ** (1/8)) * bang
+    pos = (i) / NUM_PIXELS
+    v = max(0, kick - pos)
+    return colorsys.hsv_to_rgb(h, 1, v)
+
+def get_pixel_sine(i):
+    pos = i / NUM_PIXELS
+    c = (cos(now()) + 1) /2
+    d = pos -c if pos > c else c - pos
+    v = (1 - d) ** (9)
+
+    return colorsys.hsv_to_rgb(1, 1, v)
+
 def get_pixel(i):
-    return colorsys.hsv_to_rgb((cos(now() / 10) + 1) / 2, 1, 1)
+    return get_pixel_kick(i)
 
 def get_pixels():
     return [get_pixel(i) for i in range(NUM_PIXELS)]
@@ -27,25 +46,27 @@ def to_bytes(pixels):
     padding = [0 for _ in range(DMX_CHANNELS_NUM - len(flat))]
     return (b"" + bytes(flat) + bytes(padding))
 
+print("trying to open device with VID = 0x0000 & PID = 0x0001")
+dev = usb.core.find(idVendor=0x0000, idProduct=0x0001)
+if dev is None:
+    raise ValueError('Device not found')
 
-print("trying to open HID device with VID = 0x%X" % USB_VID)
-for d in hid.enumerate(USB_VID):
-    print(d)
-    dev = hid.Device(d['vendor_id'], d['product_id'])
-    if not dev:
-        print("device not found")
-        exit(1)
-    prev_ts = 0
-    while True:
-        data = to_bytes(get_pixels())
-        for report in range(10): #REPORTS_PER_UNIVERSE)):
-            slc = data[report * CHANNELS_PER_REPORT:(report + 1) * CHANNELS_PER_REPORT]
-            # Encode to UTF8 for array of chars.
-            # hid generic inout is single report therefore by HIDAPI requirement
-            # it must be preceeded with 0x00 as dummy reportID
-            array = b"\x00" + bytes([report]) + slc + bytes([0 for _ in range(30)])
-            dev.write(array)
-        print("fps: " + str(1 / (time.monotonic() - prev_ts)))
-        prev_ts = time.monotonic()
-print("could not find such device")
-exit(1)
+cfg = dev.get_active_configuration()
+intf = cfg[(0, 0)]
+
+outep = usb.util.find_descriptor(
+    intf,
+    # match the first OUT endpoint
+    custom_match= \
+        lambda e: \
+            usb.util.endpoint_direction(e.bEndpointAddress) == \
+            usb.util.ENDPOINT_OUT)
+
+assert outep is not None
+
+prev_ts = 0
+while True:
+    data = to_bytes(get_pixels())
+    print(outep.write(data))
+    print("fps: " + str(1 / (time.monotonic() - prev_ts)))
+    prev_ts = time.monotonic()

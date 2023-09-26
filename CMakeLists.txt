@@ -18,5 +18,5 @@ target_sources(firmware PUBLIC
 )
 target_include_directories(firmware PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 target_compile_options(firmware PRIVATE ${WARN_CFLAGS})
-target_link_libraries(firmware pico_stdlib hardware_pio hardware_dma tinyusb_device tinyusb_board picodmx)
+target_link_libraries(firmware pico_stdlib hardware_pio hardware_dma tinyusb_device tinyusb_board picodmx pico_unique_id)
 pico_add_extra_outputs(firmware)
