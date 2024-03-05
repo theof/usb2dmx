@@ -10,16 +10,14 @@ from math import cos
 
 USB_VID = 0xcafe
 DMX_CHANNELS_NUM = 512
-NUM_PIXELS = 50
-CHANNELS_PER_REPORT = 32
-REPORTS_PER_UNIVERSE = int(DMX_CHANNELS_NUM / CHANNELS_PER_REPORT)
-assert(REPORTS_PER_UNIVERSE * CHANNELS_PER_REPORT == DMX_CHANNELS_NUM)
+DMX_CHANNELS_START = 50
+NUM_PIXELS = 150
 
 def now():
     return (time.monotonic_ns() / 1e9)
 
 def get_pixel_kick(i):
-    h = (cos(now() / 5) + 1) / 2
+    h = (cos(now() / 1) + 1) / 2
     kick = abs((((-now() * 2) % 1)))
     #v = (((NUM_PIXELS - i) / NUM_PIXELS) ** (1/8)) * bang
     pos = (i) / NUM_PIXELS
@@ -35,16 +33,18 @@ def get_pixel_sine(i):
     return colorsys.hsv_to_rgb(1, 1, v)
 
 def get_pixel(i):
-    return get_pixel_kick(i)
+    return get_pixel_sine(i)
 
 def get_pixels():
     return [get_pixel(i) for i in range(NUM_PIXELS)]
 
 def to_bytes(pixels):
+    start_padding = [0 for _ in range(DMX_CHANNELS_START)]
     flat = [round(color * 255) for colors in pixels for color in colors]
-    assert(len(flat) <= DMX_CHANNELS_NUM)
-    padding = [0 for _ in range(DMX_CHANNELS_NUM - len(flat))]
-    return (b"" + bytes(flat) + bytes(padding))
+    assert(len(flat) + len(start_padding) <= DMX_CHANNELS_NUM)
+    end_padding = [0 for _ in range(DMX_CHANNELS_NUM - len(flat) - len(start_padding))]
+    return b"" + bytes([255 if i == 49 else 0 for i in range(512)])
+    #return (b"" + bytes(start_padding) + bytes(flat) + bytes(end_padding))
 
 print("trying to open device with VID = 0x0000 & PID = 0x0001")
 dev = usb.core.find(idVendor=0x0000, idProduct=0x0001)

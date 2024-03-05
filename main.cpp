@@ -48,7 +48,7 @@ enum  {
   BLINK_SUSPENDED = 2500,
 };
 
-#define DMX_CHANNELS 400
+#define DMX_CHANNELS 500
 // XXX hardcoded bigger buffer for usb rcv
 static uint8_t dmx_buffer[512 + 1];
 
